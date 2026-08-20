@@ -62,7 +62,46 @@
         letter-spacing: -0.06em;
         line-height: 1;
         text-shadow: 0 8px 40px rgb(0 0 0 / 25%);
+        -webkit-user-select: none;
+        user-select: none;
         animation: appear 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+      }
+
+      #click-effects {
+        position: fixed;
+        inset: 0;
+        z-index: 2;
+        overflow: hidden;
+        pointer-events: none;
+      }
+
+      .click-ripple,
+      .click-particle {
+        position: absolute;
+        left: var(--x);
+        top: var(--y);
+        pointer-events: none;
+      }
+
+      .click-ripple {
+        width: 44px;
+        height: 44px;
+        border: 2px solid var(--color);
+        border-radius: 50%;
+        box-shadow:
+          0 0 18px var(--color),
+          inset 0 0 12px var(--color);
+        animation: ripple-out 700ms cubic-bezier(0.15, 0.7, 0.2, 1) forwards;
+      }
+
+      .click-particle {
+        width: var(--size);
+        height: var(--size);
+        border-radius: 50%;
+        background: var(--color);
+        box-shadow: 0 0 12px var(--color);
+        animation: particle-out 680ms cubic-bezier(0.15, 0.75, 0.25, 1)
+          var(--delay) forwards;
       }
 
       @keyframes color-flow {
@@ -89,6 +128,38 @@
         }
       }
 
+      @keyframes ripple-out {
+        from {
+          opacity: 0.9;
+          transform: translate(-50%, -50%) scale(0.2);
+        }
+
+        to {
+          opacity: 0;
+          transform: translate(-50%, -50%) scale(5.5);
+        }
+      }
+
+      @keyframes particle-out {
+        0% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(0.5);
+        }
+
+        70% {
+          opacity: 0.9;
+        }
+
+        100% {
+          opacity: 0;
+          transform: translate(
+              calc(-50% + var(--dx)),
+              calc(-50% + var(--dy))
+            )
+            scale(0);
+        }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         body::before,
         h1 {
@@ -102,5 +173,54 @@
     <main>
       <h1>Clothwest</h1>
     </main>
+
+    <div id="click-effects" aria-hidden="true"></div>
+
+    <script>
+      const effectLayer = document.querySelector("#click-effects");
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const colors = ["#ff7aa2", "#9a8cff", "#61f4d4", "#ffffff"];
+
+      function addClickEffect(event) {
+        const isOtherMouseButton = event.pointerType === "mouse" && event.button !== 0;
+
+        if (!event.isPrimary || isOtherMouseButton || reducedMotion.matches) {
+          return;
+        }
+
+        const x = `${event.clientX}px`;
+        const y = `${event.clientY}px`;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const ripple = document.createElement("span");
+
+        ripple.className = "click-ripple";
+        ripple.style.setProperty("--x", x);
+        ripple.style.setProperty("--y", y);
+        ripple.style.setProperty("--color", color);
+        ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
+        effectLayer.append(ripple);
+
+        for (let index = 0; index < 12; index += 1) {
+          const particle = document.createElement("span");
+          const angle = (Math.PI * 2 * index) / 12 + (Math.random() - 0.5) * 0.25;
+          const distance = 45 + Math.random() * 55;
+
+          particle.className = "click-particle";
+          particle.style.setProperty("--x", x);
+          particle.style.setProperty("--y", y);
+          particle.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+          particle.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+          particle.style.setProperty("--size", `${4 + Math.random() * 5}px`);
+          particle.style.setProperty("--delay", `${Math.random() * 70}ms`);
+          particle.style.setProperty("--color", colors[index % colors.length]);
+          particle.addEventListener("animationend", () => particle.remove(), {
+            once: true,
+          });
+          effectLayer.append(particle);
+        }
+      }
+
+      window.addEventListener("pointerdown", addClickEffect);
+    </script>
   </body>
 </html>
